@@ -18,6 +18,8 @@ import { IctEngineOverlay } from './ict-engine-overlay.js';
 import { QuarterlyDividerOverlay } from './quarterly-divider-overlay.js';
 import { FluxBlockOverlay } from './flux-block-overlay.js';
 import { LuxAlgoOverlay } from './luxalgo-overlay.js';
+import { NextCandleOverlay } from './next-candle-overlay.js';
+import { SniperOverlay } from './sniper-overlay.js';
 
 const LW = window.LightweightCharts;
 
@@ -601,7 +603,18 @@ export class ChartPane {
       const synth = bars.map((x, i) => { const v = vals[i]; return { ...x, open: v, high: v, low: v, close: v }; });
       return compute(ind.id, synth, { ...ind.params, source: "close" });
     }
-    return compute(ind.id, bars, { ...ind.params, chartSymbol: this.cfg.symbol, chartSeconds: parseTf(this.cfg.tf).seconds });
+    if(ind.id==='custom:sniper-khansaab' && this.cfg.tf!=='5m')this.loadSniperFive();
+    return compute(ind.id, bars, { ...ind.params, chartSymbol: this.cfg.symbol, chartSeconds: parseTf(this.cfg.tf).seconds,
+      ...(ind.id==='custom:sniper-khansaab'?{fiveMinuteBars:this.sniperFive?.symbol===this.cfg.symbol?this.sniperFive.bars:[]}:{}), });
+  }
+
+  async loadSniperFive(){
+    const symbol=this.cfg.symbol;
+    if(this.sniperFiveLoading||this.sniperFive?.symbol===symbol&&Date.now()-this.sniperFive.at<60000)return;
+    this.sniperFiveLoading=true;
+    try{const r=await api.candles(symbol,'5m',2000);this.sniperFive={symbol,bars:r.candles||[],at:Date.now()};}
+    catch{this.sniperFive={symbol,bars:[],at:Date.now()};}
+    finally{this.sniperFiveLoading=false;if(this.cfg.symbol===symbol)this.renderIndicators();}
   }
 
   async loadMtf(tf) {
@@ -658,6 +671,12 @@ export class ChartPane {
         this.main.attachPrimitive(overlay);
         this.vpPrims.push(overlay);
       }
+      if (res.nextCandle && !ind.tf) {
+        const overlay = new NextCandleOverlay(this, res.nextCandle);
+        this.main.attachPrimitive(overlay);
+        this.vpPrims.push(overlay);
+      }
+      if(res.sniper && !ind.tf){const overlay=new SniperOverlay(this,res.sniper);this.main.attachPrimitive(overlay);this.vpPrims.push(overlay);}
       if (res.fluxBlocks && !ind.tf) {
         const overlay = new FluxBlockOverlay(this, res.fluxBlocks);
         this.main.attachPrimitive(overlay);

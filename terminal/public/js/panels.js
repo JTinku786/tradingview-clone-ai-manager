@@ -271,13 +271,14 @@ export function initPanels(app) {
 
   // ======================= WATCHLIST =======================
   let quotes = {};
+  const watchTicks = new Map();
   function wlSymbols() {
     return app.state.watchlists[app.state.activeWatchlist] || [];
   }
   function renderWatchlist() {
     const names = Object.keys(app.state.watchlists);
     side.innerHTML = `<div class="wl-head"><select class="in" id="wlSel">${names.map((n) => `<option ${n === app.state.activeWatchlist ? "selected" : ""}>${esc(n)}</option>`).join("")}</select><button class="btn small" id="wlNew" title="New list">+ List</button><button class="btn small" id="wlDel" title="Delete this list">Delete</button></div>
-      <div style="padding:8px"><input class="in" id="wlAdd" placeholder="Add symbol (Enter)" style="width:100%"></div><div id="wlRows"></div>`;
+      <div class="wl-search"><input class="in" id="wlAdd" aria-label="Add watchlist symbol" placeholder="+ Add symbol · press Enter"></div><div id="wlBreadth" class="wl-breadth"></div><div class="wl-columns"><span>Symbol</span><span>Last</span><span>Change %</span><span></span></div><div id="wlRows"></div>`;
     $("#wlSel").onchange = (e) => {
       app.state.activeWatchlist = e.target.value;
       app.persist();
@@ -334,15 +335,24 @@ export function initPanels(app) {
     const box = $("#wlRows");
     if (!box) return;
     const cur = app.active?.cfg.symbol;
+    const counts={gain:0,loss:0,flat:0};
     box.innerHTML =
       wlSymbols()
         .map((s) => {
           const q = quotes[s] || {};
           const live = app.prices[s] ?? q.price;
-          return `<div class="wl-row ${s === cur ? "current" : ""}" data-sym="${esc(s)}"><span class="sym">${esc(ticker(s))} <span class="ex">${esc(exchange(s))}</span></span><span class="px">${fmtPrice(live)}</span><span class="chg ${q.changePct >= 0 ? "up" : "down"}">${fmtPct(q.changePct)}</span><button class="x" title="Remove"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
+          const valid=Number.isFinite(q.changePct),direction=valid?(q.changePct>0?'gain':q.changePct<0?'loss':'flat'):'unknown';
+          if(valid)counts[direction]++;
+          const previous=watchTicks.get(s),now=Date.now();
+          if(Number.isFinite(live)&&previous?.price!==live)watchTicks.set(s,{price:live,at:now,tick:previous?(live>previous.price?'rise':'fall'):''});
+          const tick=watchTicks.get(s),fresh=tick&&now-tick.at<1400?tick.tick:'';
+          const heat=valid?Math.min(.16,.025+Math.abs(q.changePct)*.025):0;
+          return `<div class="wl-row wl-${direction} ${fresh?'tick-'+fresh:''} ${s === cur ? "current" : ""}" style="--wl-heat:${heat}" data-sym="${esc(s)}"><span class="sym"><span class="wl-ticker">${esc(ticker(s))}</span><span class="ex">${esc(exchange(s))}</span></span><span class="px">${fmtPrice(live)}</span><span class="chg" title="Provider-reported percentage change">${valid?(q.changePct>0?'↗ ':q.changePct<0?'↘ ':'— ')+fmtPct(q.changePct):'—'}</span><button class="x" title="Remove ${esc(ticker(s))}" aria-label="Remove ${esc(ticker(s))}"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
         })
         .join("") ||
       '<div class="pad hint-text">Empty list. Add a symbol above.</div>';
+    const breadth=$('#wlBreadth');
+    if(breadth)breadth.innerHTML=`<span class="wl-gain">↗ ${counts.gain} up</span><span class="wl-loss">↘ ${counts.loss} down</span><span>${counts.flat} flat</span><span class="wl-count">${wlSymbols().length} symbols</span>`;
   }
   async function refreshQuotes() {
     const syms = [...new Set([...wlSymbols(), ...paperSymbols()])];

@@ -84,3 +84,17 @@ The packaged terminal passed `npm test`: **196 tests, 196 passed**. Run it from 
 - TradingView MCP: [tradesdontlie/tradingview-mcp](https://github.com/tradesdontlie/tradingview-mcp), MIT; [license](ai-manager/vendor/tradingview-mcp/LICENSE) retained with local changes.
 
 Existing component licenses govern their respective source files. TradingView and other product names belong to their owners. This repository is not affiliated with or endorsed by TradingView.
+
+## Latest dashboard additions
+
+- Next Candle Predictor by PredictaFutures: directional confluence panel, trend overlay and scenario candles; completed-candle default.
+- Sniper V.02 Community by KhanSaab: EMA ribbon, crossover and retest labels, VWAP, and seven-point bull/bear scores. Its published community source has no SL/TP engine.
+- Daily-chart mapping uses the last confirmed 5-minute context within the bar. Missing data remains explicitly unavailable.
+- Watchlist: green/red change badges, directional arrows, change-strength tint, breadth counts, aligned prices and short price-update highlights. Colours remain distinct from candle palettes.
+- All 207 terminal tests passed locally; no browser console errors observed.
+
+![Clean watchlist](docs/screenshots/watchlist.png)
+
+![Sniper dashboard](docs/screenshots/sniper.png)
+
+These are lagging research tools. Scores are not probabilities; chart signals are not broker fills. See each study guide under terminal/docs for timing, session, volume and execution limitations.
