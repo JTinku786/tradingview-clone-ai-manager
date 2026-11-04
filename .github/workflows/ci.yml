@@ -1,0 +1,23 @@
+name: Terminal and AI manager checks
+on: [push, pull_request]
+jobs:
+  terminal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm test
+        working-directory: terminal
+  ai-manager:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+        working-directory: ai-manager/vendor/tradingview-mcp
+      - run: npm run test:unit
+        working-directory: ai-manager/vendor/tradingview-mcp
